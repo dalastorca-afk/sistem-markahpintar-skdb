@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAPAN MARKAH MURID TAHUN 5 2026 - SKDB</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    .dashboard-bg {
+      position: relative;
+      background: linear-gradient(135deg, #090d16 0%, #111827 50%, #090d16 100%);
+      overflow: hidden;
+    }
+    .dashboard-bg::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 480px;
+      height: 480px;
+      background-image: url('https://lh3.googleusercontent.com/d/1VTohIzoJNofWQXBfuBgpqnLLBsO3pmkD');
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      opacity: 0.70;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .content-layer {
+      position: relative;
+      z-index: 10;
+    }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex font-sans antialiased">
+
+  <!-- SIDEBAR KIRI -->
+  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 min-h-screen shadow-2xl">
+    <div class="p-5 border-b border-slate-800 flex items-center space-x-3">
+      <img src="https://lh3.googleusercontent.com/d/1VTohIzoJNofWQXBfuBgpqnLLBsO3pmkD" alt="SKDB Logo" class="w-10 h-10 object-contain drop-shadow" onerror="this.src='https://placehold.co/80x80?text=SKDB'">
+      <div>
+        <h1 class="text-sm font-bold tracking-wide text-amber-400">SK DESA BAIDURI</h1>
+        <p class="text-xs text-slate-400">Tahun 5 (2026)</p>
+      </div>
+    </div>
+
+    <!-- Navigasi Menu -->
+    <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+      <button onclick="switchView('dashboard')" id="nav-dashboard" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition bg-blue-600 text-white shadow-lg shadow-blue-600/30">
+        <i class="fa-solid fa-gauge-high text-base"></i>
+        <span>Dashboard</span>
+      </button>
+
+      <div class="pt-5 pb-2 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+        <span>Kelas Tahun 5</span>
+        <button onclick="openModalAddClass()" class="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1">
+          <i class="fa-solid fa-plus-circle"></i> Tambah
+        </button>
+      </div>
+
+      <div id="class-nav-list" class="space-y-1"></div>
+    </nav>
+
+    <!-- Penunjuk Status Auto-Save Pintar -->
+    <div class="p-4 border-t border-slate-800 bg-slate-900/80">
+      <div class="flex items-center space-x-2.5 px-3 py-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+        <span id="cloud-status-icon" class="flex shrink-0">
+          <i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i>
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">Penyegerakan Awan</p>
+          <p id="cloud-status-text" class="text-xs text-slate-300 truncate font-medium">Sedia</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- RUANG UTAMA -->
+  <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="flex-1 dashboard-bg p-6 sm:p-8">
+      <div class="content-layer max-w-7xl mx-auto space-y-8">
+        
+        <div class="bg-slate-900/85 backdrop-blur-md p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div class="flex items-center space-x-5">
+            <img src="https://lh3.googleusercontent.com/d/1VTohIzoJNofWQXBfuBgpqnLLBsO3pmkD" alt="Logo SKDB" class="w-20 h-20 object-contain drop-shadow-md" onerror="this.src='https://placehold.co/100x100?text=SKDB'">
+            <div>
+              <h2 id="main-title" contenteditable="true" onblur="saveCustomTitle(this.innerText)" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight border-b border-transparent hover:border-amber-400 focus:border-amber-400 outline-none transition" title="Klik untuk edit tajuk">
+                PAPARAN MARKAH MURID TAHUN 5 2026
+              </h2>
+              <p class="text-xs text-slate-400 mt-1">Sistem Penilaian Akademik & Tingkah Laku SK Desa Baiduri</p>
+            </div>
+          </div>
+          
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="exportAllLeaderboardsExcel()" class="bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition">
+              <i class="fa-solid fa-award"></i> Muat Turun Leaderboard
+            </button>
+            <button onclick="exportAllToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition">
+              <i class="fa-solid fa-file-excel"></i> Eksport Semua Data (.xlsx)
+            </button>
+          </div>
+        </div>
+
+        <!-- 5 Murid Terbaik Keseluruhan -->
+        <div class="bg-slate-900/85 backdrop-blur-md rounded-2xl border border-amber-500/30 p-6 shadow-xl">
+          <div class="flex items-center justify-between mb-5 border-b border-slate-800 pb-3">
+            <div class="flex items-center space-x-3">
+              <span class="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl"><i class="fa-solid fa-trophy text-xl"></i></span>
+              <div>
+                <h3 class="text-base font-bold text-amber-300 uppercase tracking-wide">5 Murid Terbaik Keseluruhan Tahun 5</h3>
+                <p class="text-xs text-slate-400">Gabungan markah BM, BI, M3, Sains, Sejarah (Maksimum 500)</p>
+              </div>
+            </div>
+          </div>
+          <div id="top-overall-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4"></div>
+        </div>
+
+        <!-- 5 Murid Terbaik Setiap Kelas -->
+        <div class="bg-slate-900/85 backdrop-blur-md rounded-2xl border border-blue-500/30 p-6 shadow-xl space-y-6">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center space-x-3">
+              <span class="p-2.5 bg-blue-500/20 text-blue-400 rounded-xl"><i class="fa-solid fa-medal text-xl"></i></span>
+              <div>
+                <h3 class="text-base font-bold text-blue-300 uppercase tracking-wide">5 Murid Terbaik Setiap Kelas</h3>
+                <p class="text-xs text-slate-400">Kedudukan 5 teratas mengikut kelas masing-masing</p>
+              </div>
+            </div>
+          </div>
+          <div id="top-per-class-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+        </div>
+
+        <!-- 5 Murid Terbaik Setiap Mata Pelajaran -->
+        <div class="bg-slate-900/85 backdrop-blur-md rounded-2xl border border-purple-500/30 p-6 shadow-xl space-y-6">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center space-x-3">
+              <span class="p-2.5 bg-purple-500/20 text-purple-400 rounded-xl"><i class="fa-solid fa-star text-xl"></i></span>
+              <div>
+                <h3 class="text-base font-bold text-purple-300 uppercase tracking-wide">5 Murid Terbaik Setiap Mata Pelajaran (Keseluruhan T5)</h3>
+                <p class="text-xs text-slate-400">Turutan: BM, BI, M3 (Matematik), Sains, Sejarah</p>
+              </div>
+            </div>
+          </div>
+          <div id="top-per-subject-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- PAPARAN KELAS -->
+    <section id="view-class" class="hidden flex-1 p-6 sm:p-8 bg-slate-950 overflow-y-auto">
+      <div class="max-w-7xl mx-auto space-y-6">
+        
+        <div class="bg-slate-900 rounded-2xl p-6 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-3">
+              <h2 id="current-class-title" class="text-2xl sm:text-3xl font-extrabold text-white">5 BERLIAN</h2>
+              <button onclick="openModalRenameClass(state.currentClass)" class="text-slate-400 hover:text-amber-400 text-sm"><i class="fa-solid fa-pen-to-square"></i></button>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Papan Markah Murid • BM, BI, M3 (Matematik), Sains, Sejarah</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="openModalAddStudent()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition">
+              <i class="fa-solid fa-user-plus"></i> Tambah Murid
+            </button>
+            <button onclick="openModalBulkPaste()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition">
+              <i class="fa-solid fa-paste"></i> TAMPAL NAMA & MARKAH MP
+            </button>
+            <button onclick="exportCurrentClassExcel()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-slate-700 shadow transition">
+              <i class="fa-solid fa-file-excel text-emerald-400"></i> Muat Turun Kelas (.xlsx)
+            </button>
+            <button onclick="clearAllStudentsCurrentClass()" class="bg-rose-700 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow transition">
+              <i class="fa-solid fa-trash-can"></i> Padam Semua Murid
+            </button>
+          </div>
+        </div>
+
+        <!-- Jadual Markah Murid -->
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-200">
+              <thead class="bg-slate-950 text-slate-300 uppercase text-xs font-semibold tracking-wider border-b border-slate-800">
+                <tr>
+                  <th class="py-3.5 px-3 w-12 text-center">Bil</th>
+                  <th class="py-3.5 px-3 min-w-[220px]">Nama Murid</th>
+                  <th class="py-3.5 px-2 w-20 text-center text-blue-400">BM</th>
+                  <th class="py-3.5 px-2 w-20 text-center text-blue-400">BI</th>
+                  <th class="py-3.5 px-2 w-20 text-center text-blue-400">M3</th>
+                  <th class="py-3.5 px-2 w-20 text-center text-blue-400">Sains</th>
+                  <th class="py-3.5 px-2 w-20 text-center text-blue-400">Sejarah</th>
+                  <th class="py-3.5 px-2 w-20 text-center bg-slate-950 text-amber-400">JUM</th>
+                  <th class="py-3.5 px-2 w-20 text-center bg-slate-950 text-emerald-400">%</th>
+                  <th class="py-3.5 px-2 w-14 text-center bg-slate-950 text-amber-300 font-black">G</th>
+                  <th class="py-3.5 px-2 w-28 text-center">Kualiti</th>
+                  <th class="py-3.5 px-2 w-28 text-center">Tingkah Laku</th>
+                  <th class="py-3.5 px-3 w-14 text-center">Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="student-table-body" class="divide-y divide-slate-800/80"></tbody>
+            </table>
+          </div>
+
+          <div id="empty-state" class="hidden p-12 text-center space-y-3">
+            <i class="fa-solid fa-user-slash text-4xl text-slate-600"></i>
+            <p class="text-slate-400 font-medium">Tiada murid dalam kelas ini lagi.</p>
+            <p class="text-xs text-slate-500">Gunakan butang <span class="text-indigo-400 font-bold">TAMPAL NAMA & MARKAH MP</span> untuk memasukkan senarai terus dari Excel.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL TAMPAL NAMA & MARKAH PINTAR UPSA -->
+  <div id="modal-bulk-paste" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-paste text-indigo-400"></i> TAMPAL NAMA DAN MARKAH MP (Pintar UPSA)
+        </h3>
+        <button onclick="closeModal('modal-bulk-paste')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Salin terus dari fail Excel UPSA anda. Sistem secara automatik mengekstrak markah <span class="text-amber-400 font-bold">BM, BI, M3, Sains, dan Sejarah</span> dan mengabaikan lajur gred (A-F) mahupun selang pembahagi.
+      </p>
+
+      <div class="space-y-1">
+        <label class="text-xs text-slate-400 font-semibold">Tampal Data Di Sini (Ctrl + V):</label>
+        <textarea id="paste-input-area" rows="8" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 font-mono focus:border-indigo-400 outline-none" placeholder="Tampal baris murid dari fail Excel di sini..."></textarea>
+      </div>
+
+      <div class="flex items-center justify-between pt-2">
+        <div class="flex items-center space-x-4 text-xs">
+          <label class="flex items-center space-x-1.5 cursor-pointer">
+            <input type="radio" name="paste-mode" value="append" checked class="text-indigo-600 focus:ring-0">
+            <span>Tambah sebagai Murid Baharu</span>
+          </label>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="closeModal('modal-bulk-paste')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">Batal</button>
+          <button onclick="processBulkPaste()" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg">Proses Tampalan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TAMBAH MURID MANUAL -->
+  <div id="modal-add-student" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <h3 class="text-base font-bold text-white flex items-center gap-2">
+        <i class="fa-solid fa-user-plus text-blue-400"></i> Tambah Murid Manual
+      </h3>
+      <input type="text" id="manual-student-name" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 outline-none focus:border-blue-400 uppercase" placeholder="Nama Penuh Murid">
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeModal('modal-add-student')" class="px-3 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-300">Batal</button>
+        <button onclick="saveManualStudent()" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TAMBAH KELAS -->
+  <div id="modal-add-class" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2">
+        <i class="fa-solid fa-plus-circle text-blue-400"></i> Tambah Kelas Baharu
+      </h3>
+      <input type="text" id="new-class-name" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white uppercase outline-none focus:border-blue-400" placeholder="Contoh: 5 ZAMRUD">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeModal('modal-add-class')" class="px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded">Batal</button>
+        <button onclick="saveNewClass()" class="px-3 py-1 text-xs bg-blue-600 text-white font-bold rounded">Tambah</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TUKAR NAMA KELAS -->
+  <div id="modal-rename-class" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4">
+      <h3 class="text-sm font-bold text-white flex items-center gap-2">
+        <i class="fa-solid fa-pen-to-square text-amber-400"></i> Tukar Nama Kelas
+      </h3>
+      <input type="text" id="rename-class-name" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white uppercase outline-none focus:border-amber-400">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeModal('modal-rename-class')" class="px-3 py-1 text-xs bg-slate-800 text-slate-300 rounded">Batal</button>
+        <button onclick="saveRenamedClass()" class="px-3 py-1 text-xs bg-amber-600 text-white font-bold rounded">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    const DEFAULT_CLASSES = ["5 BERLIAN", "5 DELIMA", "5 INTAN", "5 MUTIARA", "5 NILAM", "5 PERMATA", "5 ZAMRUD"];
+    const SUBJECTS = [
+      { key: "bm", name: "BM" },
+      { key: "bi", name: "BI" },
+      { key: "matematik", name: "M3" },
+      { key: "sains", name: "Sains" },
+      { key: "sejarah", name: "Sejarah" }
+    ];
+
+    let state = {
+      title: "PAPARAN MARKAH MURID TAHUN 5 2026",
+      classes: [...DEFAULT_CLASSES],
+      currentClass: "5 BERLIAN",
+      students: {}
+    };
+
+    let autoSaveTimer = null;
+
+    function setStatus(type, message) {
+      const icon = document.getElementById('cloud-status-icon');
+      const text = document.getElementById('cloud-status-text');
+      if (!icon || !text) return;
+
+      if (type === 'loading') {
+        icon.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400 text-xs"></i>`;
+        text.innerText = message;
+      } else if (type === 'saving') {
+        icon.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400 text-xs"></i>`;
+        text.innerText = message;
+      } else if (type === 'saved') {
+        icon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i>`;
+        text.innerText = message;
+      } else if (type === 'error') {
+        icon.innerHTML = `<i class="fa-solid fa-circle-exclamation text-rose-400 text-xs"></i>`;
+        text.innerText = message;
+      }
+    }
+
+    // Pencetus Auto-Save (Debounce 1.5 saat)
+    function triggerAutoSave() {
+      setStatus('saving', 'Menyimpan perubahan...');
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            setStatus('saved', `Disimpan (${timeStr})`);
+          })
+          .withFailureHandler(function(err) {
+            setStatus('error', 'Gagal simpan ke cloud');
+          })
+          .saveDataFromWeb(state.students);
+      }, 1500);
+    }
+
+    // Auto-Fetch sewaktu laman mula dimuat
+    function autoFetchFromCloud() {
+      setStatus('loading', 'Menyegerak data...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.students) {
+            state.students = res.students;
+            state.classes.forEach(c => { if (!state.students[c]) state.students[c] = []; });
+            renderClassNav();
+            if (!document.getElementById('view-dashboard').classList.contains('hidden')) {
+              renderDashboard();
+            } else {
+              renderClassView();
+            }
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            setStatus('saved', `Terkini (${timeStr})`);
+          }
+        })
+        .withFailureHandler(function(err) {
+          setStatus('error', 'Ralat sambungan');
+        })
+        .loadDataForWeb();
+    }
+
+    function calculateGradeAndQuality(avg) {
+      if (avg >= 82) return { gred: 'A', kualiti: 'BIJAK', bg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' };
+      if (avg >= 66) return { gred: 'B', kualiti: 'BIJAK', bg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' };
+      if (avg >= 50) return { gred: 'C', kualiti: 'SEDERHANA', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' };
+      if (avg >= 35) return { gred: 'D', kualiti: 'SEDERHANA', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' };
+      if (avg >= 20) return { gred: 'E', kualiti: 'LEMAH', bg: 'bg-rose-500/20 text-rose-400 border-rose-500/40' };
+      return { gred: 'F', kualiti: 'LEMAH', bg: 'bg-rose-500/20 text-rose-400 border-rose-500/40' };
+    }
+
+    function initApp() {
+      state.classes.forEach(c => { if (!state.students[c]) state.students[c] = []; });
+      renderClassNav();
+      switchView('dashboard');
+      autoFetchFromCloud();
+    }
+
+    function switchView(viewName, className = null) {
+      const vDashboard = document.getElementById('view-dashboard');
+      const vClass = document.getElementById('view-class');
+      const navDashboard = document.getElementById('nav-dashboard');
+
+      if (viewName === 'dashboard') {
+        vDashboard.classList.remove('hidden');
+        vClass.classList.add('hidden');
+        navDashboard.classList.add('bg-blue-600', 'text-white');
+        renderDashboard();
+      } else {
+        vDashboard.classList.add('hidden');
+        vClass.classList.remove('hidden');
+        navDashboard.classList.remove('bg-blue-600', 'text-white');
+        if (className) state.currentClass = className;
+        renderClassView();
+      }
+      renderClassNav();
+    }
+
+    function renderClassNav() {
+      const container = document.getElementById('class-nav-list');
+      container.innerHTML = '';
+      state.classes.forEach(cls => {
+        const isActive = (document.getElementById('view-dashboard').classList.contains('hidden') && state.currentClass === cls);
+        const count = state.students[cls] ? state.students[cls].length : 0;
+        const div = document.createElement('div');
+        div.className = `group flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
+          isActive ? 'bg-slate-800 text-amber-400 border-l-4 border-amber-400 font-bold' : 'text-slate-300 hover:bg-slate-900 hover:text-white'
+        }`;
+        div.innerHTML = `
+          <div class="flex items-center space-x-2.5 truncate" onclick="switchView('class', '${cls}')">
+            <i class="fa-solid fa-chalkboard-user text-xs ${isActive ? 'text-amber-400' : 'text-slate-500'}"></i>
+            <span class="truncate">${cls}</span>
+          </div>
+          <span class="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">${count}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderClassView() {
+      document.getElementById('current-class-title').innerText = state.currentClass;
+      const list = state.students[state.currentClass] || [];
+      const tbody = document.getElementById('student-table-body');
+      const emptyState = document.getElementById('empty-state');
+      tbody.innerHTML = '';
+
+      if (list.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      list.forEach((st, idx) => {
+        const bm = Number(st.bm) || 0;
+        const bi = Number(st.bi) || 0;
+        const m3 = Number(st.matematik) || 0;
+        const sn = Number(st.sains) || 0;
+        const sej = Number(st.sejarah) || 0;
+        const total = bm + bi + m3 + sn + sej;
+        const avg = parseFloat((total / 5).toFixed(1));
+        const res = calculateGradeAndQuality(avg);
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-900/50 transition border-b border-slate-800/80";
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 text-center font-mono text-slate-400 text-xs">${idx + 1}</td>
+          <td class="py-2 px-3 font-semibold text-slate-100 text-xs truncate max-w-[220px]" title="${st.name}">${st.name}</td>
+          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.bm ?? ''}" oninput="updateScore('${st.id}', 'bm', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
+          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.bi ?? ''}" oninput="updateScore('${st.id}', 'bi', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
+          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.matematik ?? ''}" oninput="updateScore('${st.id}', 'matematik', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
+          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.sains ?? ''}" oninput="updateScore('${st.id}', 'sains', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
+          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.sejarah ?? ''}" oninput="updateScore('${st.id}', 'sejarah', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
+          <td id="tot-${st.id}" class="py-2 px-1 text-center font-bold text-amber-400 bg-slate-950/40 text-xs">${total}</td>
+          <td id="avg-${st.id}" class="py-2 px-1 text-center font-bold text-emerald-400 bg-slate-950/40 text-xs">${avg}%</td>
+          <td id="grd-${st.id}" class="py-2 px-1 text-center font-black text-amber-300 bg-slate-950/50 text-xs">${res.gred}</td>
+          <td class="py-2 px-1 text-center"><span id="qlt-${st.id}" class="text-[10px] font-bold px-2 py-0.5 rounded border ${res.bg}">${res.kualiti}</span></td>
+          <td class="py-1 px-1.5 text-center">
+            <select onchange="updateBehavior('${st.id}', this.value)" class="bg-slate-950 border border-slate-800 text-[11px] rounded px-1.5 py-1 text-slate-300">
+              <option value="BAIK" ${st.behavior==='BAIK'?'selected':''}>Baik</option>
+              <option value="SEDERHANA" ${st.behavior==='SEDERHANA'?'selected':''}>Sederhana</option>
+              <option value="NAKAL" ${st.behavior==='NAKAL'?'selected':''}>Nakal</option>
+            </select>
+          </td>
+          <td class="py-2 px-2 text-center">
+            <button onclick="deleteStudent('${st.id}')" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash-can"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateScore(id, subj, val) {
+      let num = val === '' ? '' : parseInt(val, 10);
+      if (num !== '') {
+        if (num < 0) num = 0;
+        if (num > 100) num = 100;
+      }
+      const st = (state.students[state.currentClass] || []).find(s => s.id === id);
+      if (st) {
+        st[subj] = num;
+        const bm = Number(st.bm) || 0;
+        const bi = Number(st.bi) || 0;
+        const m3 = Number(st.matematik) || 0;
+        const sn = Number(st.sains) || 0;
+        const sej = Number(st.sejarah) || 0;
+        const total = bm + bi + m3 + sn + sej;
+        const avg = parseFloat((total / 5).toFixed(1));
+        const res = calculateGradeAndQuality(avg);
+
+        document.getElementById(`tot-${id}`).innerText = total;
+        document.getElementById(`avg-${id}`).innerText = `${avg}%`;
+        document.getElementById(`grd-${id}`).innerText = res.gred;
+        const qEl = document.getElementById(`qlt-${id}`);
+        qEl.innerText = res.kualiti;
+        qEl.className = `text-[10px] font-bold px-2 py-0.5 rounded border ${res.bg}`;
+
+        triggerAutoSave();
+      }
+    }
+
+    function updateBehavior(id, val) {
+      const st = (state.students[state.currentClass] || []).find(s => s.id === id);
+      if (st) {
+        st.behavior = val;
+        triggerAutoSave();
+      }
+    }
+
+    function deleteStudent(id) {
+      if (confirm("Padam murid ini?")) {
+        state.students[state.currentClass] = state.students[state.currentClass].filter(s => s.id !== id);
+        renderClassNav();
+        renderClassView();
+        triggerAutoSave();
+      }
+    }
+
+    function clearAllStudentsCurrentClass() {
+      if (confirm(`Padam SEMUA murid dalam kelas ${state.currentClass}?`)) {
+        state.students[state.currentClass] = [];
+        renderClassNav();
+        renderClassView();
+        triggerAutoSave();
+      }
+    }
+
+    // Pengekstrak Pintar UPSA SKDB
+    function processBulkPaste() {
+      const text = document.getElementById('paste-input-area').value;
+      if (!text || !text.trim()) return alert("Sila tampal teks terlebih dahulu.");
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      if (!state.students[state.currentClass]) state.students[state.currentClass] = [];
+      const targetList = state.students[state.currentClass];
+      const gradeTokens = new Set(['A', 'B', 'C', 'D', 'E', 'F', 'TH', 'G', 'L', 'S', 'BJK', 'TM', 'M', '-']);
+
+      let count = 0;
+      lines.forEach((line) => {
+        let tokens = line.split('\t').map(t => t.trim());
+        if (tokens.length <= 1) tokens = line.split(/[,;]/).map(t => t.trim());
+        if (tokens.length === 0) return;
+
+        const lineUpper = line.toUpperCase();
+        if (lineUpper.includes("NAMA GURU") || lineUpper.includes("BIL MURID") || (lineUpper.includes("NAMA") && lineUpper.includes("BM"))) return;
+
+        let name = "";
+        let dataStartIndex = 0;
+        if (/^\d+$/.test(tokens[0]) && tokens.length > 1) {
+          name = tokens[1];
+          dataStartIndex = 2;
+        } else {
+          name = tokens[0];
+          dataStartIndex = 1;
+        }
+        if (!name || name.toUpperCase() === 'NAMA' || name.toUpperCase().includes('JUMLAH')) return;
+
+        let scores = { bm: '', bi: '', matematik: '', sains: '', sejarah: '' };
+        const parseVal = (v) => {
+          if (!v || gradeTokens.has(String(v).toUpperCase())) return '';
+          let n = parseFloat(v);
+          return (!isNaN(n) && n >= 0 && n <= 100) ? Math.round(n) : '';
+        };
+
+        if (tokens.length >= 14 && dataStartIndex === 2) {
+          let bm1 = parseVal(tokens[2]), bm2 = parseVal(tokens[4]);
+          scores.bm = bm1 !== '' ? bm1 : (bm2 !== '' ? bm2 : 0);
+          let bi1 = parseVal(tokens[6]), bi2 = parseVal(tokens[8]);
+          scores.bi = bi1 !== '' ? bi1 : (bi2 !== '' ? bi2 : 0);
+          scores.matematik = parseVal(tokens[10]);
+          scores.sains = parseVal(tokens[12]);
+          scores.sejarah = parseVal(tokens[14]);
+        } else {
+          let numScores = [];
+          for (let i = dataStartIndex; i < tokens.length; i++) {
+            let t = tokens[i].toUpperCase();
+            if (gradeTokens.has(t) || t === '' || t === '/') continue;
+            let n = parseFloat(t);
+            if (!isNaN(n) && n >= 0 && n <= 100) numScores.push(Math.round(n));
+          }
+          scores.bm = numScores[0] ?? '';
+          scores.bi = numScores[1] ?? '';
+          scores.matematik = numScores[2] ?? '';
+          scores.sains = numScores[3] ?? '';
+          scores.sejarah = numScores[4] ?? '';
+        }
+
+        targetList.push({
+          id: 'ST_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          name: name.toUpperCase().replace(/\s+/g, ' '),
+          bm: scores.bm,
+          bi: scores.bi,
+          matematik: scores.matematik,
+          sains: scores.sains,
+          sejarah: scores.sejarah,
+          behavior: 'BAIK'
+        });
+        count++;
+      });
+
+      renderClassNav();
+      renderClassView();
+      closeModal('modal-bulk-paste');
+      document.getElementById('paste-input-area').value = '';
+      triggerAutoSave();
+    }
+
+    // Dashboard
+    function renderDashboard() {
+      renderTopOverall();
+      renderTopPerClass();
+      renderTopPerSubject();
+    }
+
+    function renderTopOverall() {
+      const container = document.getElementById('top-overall-container');
+      container.innerHTML = '';
+      let all = [];
+      state.classes.forEach(cls => {
+        (state.students[cls] || []).forEach(st => {
+          const tot = (Number(st.bm)||0) + (Number(st.bi)||0) + (Number(st.matematik)||0) + (Number(st.sains)||0) + (Number(st.sejarah)||0);
+          all.push({ ...st, className: cls, total: tot, avg: (tot/5).toFixed(1) });
+        });
+      });
+      all.sort((a,b) => b.total - a.total);
+      const top5 = all.slice(0, 5);
+
+      if (top5.length === 0 || top5[0].total === 0) {
+        container.innerHTML = `<div class="col-span-5 py-6 text-center text-slate-500 text-xs italic">Tiada data markah lagi.</div>`;
+        return;
+      }
+
+      const ranks = ["JUARA", "NAIB JUARA", "KETIGA", "KE-4", "KE-5"];
+      top5.forEach((st, i) => {
+        const div = document.createElement('div');
+        div.className = "p-4 rounded-xl border border-amber-500/30 bg-slate-900/90 shadow flex flex-col justify-between";
+        div.innerHTML = `
+          <div class="flex justify-between items-center text-xs font-black text-amber-400">
+            <span>${ranks[i]}</span>
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+          <div class="my-2 truncate">
+            <h4 class="font-bold text-white text-sm truncate" title="${st.name}">${st.name}</h4>
+            <p class="text-[11px] text-slate-400">${st.className}</p>
+          </div>
+          <div class="flex justify-between items-baseline pt-2 border-t border-slate-800 text-xs">
+            <span class="font-black text-amber-400 text-base">${st.total} <span class="text-[10px] text-slate-500 font-normal">/500</span></span>
+            <span class="font-bold text-emerald-400">${st.avg}%</span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderTopPerClass() {
+      const container = document.getElementById('top-per-class-container');
+      container.innerHTML = '';
+      state.classes.forEach(cls => {
+        const list = (state.students[cls] || []).map(s => {
+          const t = (Number(s.bm)||0) + (Number(s.bi)||0) + (Number(s.matematik)||0) + (Number(s.sains)||0) + (Number(s.sejarah)||0);
+          return { ...s, total: t, avg: (t/5).toFixed(1) };
+        }).sort((a,b) => b.total - a.total).slice(0, 5).filter(s => s.total > 0);
+
+        const box = document.createElement('div');
+        box.className = "bg-slate-950/70 border border-slate-800 rounded-xl p-4";
+        let rows = list.length === 0 ? `<div class="text-xs text-slate-600 py-3 text-center italic">Tiada markah</div>` : list.map((s, idx) => `
+          <div class="flex items-center justify-between text-xs py-1.5 border-b border-slate-800/60 last:border-0">
+            <span class="truncate pr-2"><span class="font-bold text-amber-400">${idx+1}.</span> ${s.name}</span>
+            <span class="font-bold text-amber-300 shrink-0">${s.total} <span class="text-[10px] text-slate-500 font-normal">(${s.avg}%)</span></span>
+          </div>
+        `).join('');
+
+        box.innerHTML = `
+          <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-800">
+            <span class="font-bold text-blue-400 text-sm">${cls}</span>
+            <button onclick="switchView('class', '${cls}')" class="text-[11px] text-slate-400 hover:text-white">Buka</button>
+          </div>
+          <div class="space-y-0.5">${rows}</div>
+        `;
+        container.appendChild(box);
+      });
+    }
+
+    // 5 Murid Terbaik Setiap Mata Pelajaran (Kini dipamerkan Nama dan Nama Kelas)
+    function renderTopPerSubject() {
+      const container = document.getElementById('top-per-subject-container');
+      container.innerHTML = '';
+      SUBJECTS.forEach(sub => {
+        let all = [];
+        state.classes.forEach(cls => {
+          (state.students[cls] || []).forEach(st => {
+            const sc = st[sub.key] !== '' && st[sub.key] !== undefined ? Number(st[sub.key]) : null;
+            if (sc !== null && sc > 0) all.push({ name: st.name, className: cls, score: sc });
+          });
+        });
+        all.sort((a,b) => b.score - a.score);
+        const top5 = all.slice(0, 5);
+
+        const card = document.createElement('div');
+        card.className = "bg-slate-950/70 border border-slate-800 rounded-xl p-4 flex flex-col justify-between";
+        let content = top5.length === 0 ? `<div class="text-xs text-slate-600 py-3 text-center italic">Tiada markah</div>` : top5.map((s, idx) => `
+          <div class="py-1.5 border-b border-slate-800/60 last:border-0">
+            <div class="flex items-center justify-between text-xs">
+              <span class="truncate pr-2 font-semibold text-slate-200" title="${s.name}">
+                <span class="font-bold text-purple-400">${idx+1}.</span> ${s.name}
+              </span>
+              <span class="font-extrabold text-amber-400 text-xs shrink-0">${s.score}</span>
+            </div>
+            <div class="text-[10px] text-slate-400 pl-4 uppercase tracking-wide font-medium">
+              ${s.className}
+            </div>
+          </div>
+        `).join('');
+
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-center pb-2 mb-2 border-b border-purple-500/30">
+              <h4 class="font-bold text-purple-300 text-xs">${sub.name}</h4>
+              <span class="text-[9px] px-1.5 py-0.5 bg-purple-900/50 text-purple-300 rounded font-bold">Top 5</span>
+            </div>
+            <div class="space-y-1">${content}</div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Modal Helpers
+    function openModalBulkPaste() { document.getElementById('modal-bulk-paste').classList.remove('hidden'); }
+    function openModalAddStudent() { document.getElementById('modal-add-student').classList.remove('hidden'); }
+    function openModalAddClass() { document.getElementById('modal-add-class').classList.remove('hidden'); }
+    function openModalRenameClass(cls) { 
+      document.getElementById('rename-class-name').value = cls;
+      document.getElementById('modal-rename-class').classList.remove('hidden'); 
+    }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function saveManualStudent() {
+      const name = document.getElementById('manual-student-name').value.trim();
+      if (!name) return alert("Sila masukkan nama murid.");
+      if (!state.students[state.currentClass]) state.students[state.currentClass] = [];
+      state.students[state.currentClass].push({
+        id: 'ST_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        name: name.toUpperCase(),
+        bm: '', bi: '', matematik: '', sains: '', sejarah: '', behavior: 'BAIK'
+      });
+      document.getElementById('manual-student-name').value = '';
+      closeModal('modal-add-student');
+      renderClassNav();
+      renderClassView();
+      triggerAutoSave();
+    }
+
+    function saveNewClass() {
+      const name = document.getElementById('new-class-name').value.trim().toUpperCase();
+      if (!name) return alert("Sila masukkan nama kelas.");
+      if (state.classes.includes(name)) return alert("Nama kelas sudah wujud.");
+      state.classes.push(name);
+      state.students[name] = [];
+      document.getElementById('new-class-name').value = '';
+      closeModal('modal-add-class');
+      renderClassNav();
+      triggerAutoSave();
+    }
+
+    function saveRenamedClass() {
+      const newName = document.getElementById('rename-class-name').value.trim().toUpperCase();
+      if (!newName) return alert("Nama tidak boleh kosong.");
+      const oldName = state.currentClass;
+      if (oldName === newName) return closeModal('modal-rename-class');
+      const idx = state.classes.indexOf(oldName);
+      if (idx !== -1) state.classes[idx] = newName;
+      state.students[newName] = state.students[oldName] || [];
+      delete state.students[oldName];
+      state.currentClass = newName;
+      closeModal('modal-rename-class');
+      renderClassNav();
+      renderClassView();
+      triggerAutoSave();
+    }
+
+    function saveCustomTitle(text) {
+      state.title = text.trim();
+    }
+
+    // Export Excel Kelas
+    function exportCurrentClassExcel() {
+      const list = state.students[state.currentClass] || [];
+      if (list.length === 0) return alert("Tiada data untuk dieksport.");
+      const rows = [["BIL", "NAMA MURID", "KELAS", "BM", "BI", "M3", "SAINS", "SEJARAH", "JUMLAH", "PURATA", "GRED", "KUALITI", "TINGKAH LAKU"]];
+      list.forEach((s, idx) => {
+        const tot = (Number(s.bm)||0) + (Number(s.bi)||0) + (Number(s.matematik)||0) + (Number(s.sains)||0) + (Number(s.sejarah)||0);
+        const avg = parseFloat((tot / 5).toFixed(1));
+        const res = calculateGradeAndQuality(avg);
+        rows.push([idx+1, s.name, state.currentClass, s.bm??'', s.bi??'', s.matematik??'', s.sains??'', s.sejarah??'', tot, avg, res.gred, res.kualiti, s.behavior||'BAIK']);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, state.currentClass.slice(0, 31));
+      XLSX.writeFile(wb, `MARKAH_${state.currentClass.replace(/\s+/g, '_')}_2026.xlsx`);
+    }
+
+    // Export Excel Semua Data
+    function exportAllToExcel() {
+      const wb = XLSX.utils.book_new();
+      state.classes.forEach(cls => {
+        const list = state.students[cls] || [];
+        const rows = [["BIL", "NAMA MURID", "KELAS", "BM", "BI", "M3", "SAINS", "SEJARAH", "JUMLAH", "PURATA", "GRED", "KUALITI", "TINGKAH LAKU"]];
+        list.forEach((s, idx) => {
+          const tot = (Number(s.bm)||0) + (Number(s.bi)||0) + (Number(s.matematik)||0) + (Number(s.sains)||0) + (Number(s.sejarah)||0);
+          const avg = parseFloat((tot / 5).toFixed(1));
+          const res = calculateGradeAndQuality(avg);
+          rows.push([idx+1, s.name, cls, s.bm??'', s.bi??'', s.matematik??'', s.sains??'', s.sejarah??'', tot, avg, res.gred, res.kualiti, s.behavior||'BAIK']);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, cls.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 31));
+      });
+      XLSX.writeFile(wb, `PAPAN_MARKAH_TAHUN_5_SKDB_2026.xlsx`);
+    }
+
+    // MUAT TURUN LEADERBOARD KESELURUHAN (3 BAHAGIAN DALAM 1 FAIL DENGAN MULTI-SHEET)
+    function exportAllLeaderboardsExcel() {
+      const wb = XLSX.utils.book_new();
+
+      // BAHAGIAN 1: 5 Murid Terbaik Keseluruhan Tahun 5
+      let allOverall = [];
+      state.classes.forEach(cls => {
+        (state.students[cls] || []).forEach(st => {
+          const tot = (Number(st.bm)||0) + (Number(st.bi)||0) + (Number(st.matematik)||0) + (Number(st.sains)||0) + (Number(st.sejarah)||0);
+          allOverall.push({ ...st, className: cls, total: tot, avg: (tot/5).toFixed(1) });
+        });
+      });
+      allOverall.sort((a,b) => b.total - a.total);
+      const top5Overall = allOverall.slice(0, 5);
+
+      const rowsOverall = [
+        ["5 MURID TERBAIK KESELURUHAN TAHUN 5 (SK DESA BAIDURI 2026)"],
+        ["KEDUDUKAN", "NAMA MURID", "KELAS", "JUMLAH MARKAH (500)", "PURATA (%)"]
+      ];
+      const ranks = ["JUARA", "NAIB JUARA", "KETIGA", "KE-4", "KE-5"];
+      top5Overall.forEach((s, i) => {
+        rowsOverall.push([ranks[i] || (i+1), s.name, s.className, s.total, s.avg]);
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rowsOverall), "TOP_5_KESELURUHAN_T5");
+
+      // BAHAGIAN 2: 5 Murid Terbaik Setiap Kelas
+      const rowsPerClass = [
+        ["5 MURID TERBAIK SETIAP KELAS TAHUN 5 (SK DESA BAIDURI 2026)"],
+        ["KELAS", "KEDUDUKAN", "NAMA MURID", "JUMLAH MARKAH (500)", "PURATA (%)"]
+      ];
+      state.classes.forEach(cls => {
+        const classStudents = (state.students[cls] || []).map(s => {
+          const tot = (Number(s.bm)||0) + (Number(s.bi)||0) + (Number(s.matematik)||0) + (Number(s.sains)||0) + (Number(s.sejarah)||0);
+          return { ...s, total: tot, avg: (tot/5).toFixed(1) };
+        }).sort((a,b) => b.total - a.total).slice(0, 5).filter(s => s.total > 0);
+
+        if (classStudents.length > 0) {
+          classStudents.forEach((s, idx) => {
+            rowsPerClass.push([cls, idx + 1, s.name, s.total, s.avg]);
+          });
+        } else {
+          rowsPerClass.push([cls, "-", "Tiada data markah", "-", "-"]);
+        }
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rowsPerClass), "TOP_5_SETIAP_KELAS");
+
+      // BAHAGIAN 3: 5 Murid Terbaik Setiap Mata Pelajaran (Keseluruhan T5)
+      const rowsPerSubject = [
+        ["5 MURID TERBAIK SETIAP MATA PELAJARAN KESELURUHAN TAHUN 5 (SK DESA BAIDURI 2026)"],
+        ["MATA PELAJARAN", "KEDUDUKAN", "NAMA MURID", "KELAS", "MARKAH"]
+      ];
+      SUBJECTS.forEach(sub => {
+        let subList = [];
+        state.classes.forEach(cls => {
+          (state.students[cls] || []).forEach(st => {
+            const sc = st[sub.key] !== '' && st[sub.key] !== undefined ? Number(st[sub.key]) : null;
+            if (sc !== null && sc > 0) subList.push({ name: st.name, className: cls, score: sc });
+          });
+        });
+        subList.sort((a,b) => b.score - a.score);
+        const top5Sub = subList.slice(0, 5);
+
+        if (top5Sub.length > 0) {
+          top5Sub.forEach((s, idx) => {
+            rowsPerSubject.push([sub.name, idx + 1, s.name, s.className, s.score]);
+          });
+        } else {
+          rowsPerSubject.push([sub.name, "-", "Tiada data markah", "-", "-"]);
+        }
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rowsPerSubject), "TOP_5_SETIAP_SUBJEK");
+
+      // Jana dan Muat Turun Fail Excel
+      XLSX.writeFile(wb, `LEADERBOARD_PENUH_TAHUN_5_SKDB_2026.xlsx`);
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
