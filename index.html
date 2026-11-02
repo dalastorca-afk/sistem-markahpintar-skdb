@@ -301,8 +301,10 @@
     </div>
   </div>
 
-  <!-- JAVASCRIPT LOGIC -->
+  <!-- JAVASCRIPT LOGIC DENGAN SAMBUNGAN FETCH (API) -->
   <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxqYHbHh8pDtkRZo6bBVmesruylS5OjYeyRfUxVqlqyZ8GDoDej9NUcrz6pzJFLWaU-A/exec";
+
     const DEFAULT_CLASSES = ["5 BERLIAN", "5 DELIMA", "5 INTAN", "5 MUTIARA", "5 NILAM", "5 PERMATA", "5 ZAMRUD"];
     const SUBJECTS = [
       { key: "bm", name: "BM" },
@@ -341,45 +343,57 @@
       }
     }
 
-    // Pencetus Auto-Save (Debounce 1.5 saat)
     function triggerAutoSave() {
       setStatus('saving', 'Menyimpan perubahan...');
       clearTimeout(autoSaveTimer);
       autoSaveTimer = setTimeout(() => {
-        google.script.run
-          .withSuccessHandler(function(res) {
-            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            setStatus('saved', `Disimpan (${timeStr})`);
-          })
-          .withFailureHandler(function(err) {
-            setStatus('error', 'Gagal simpan ke cloud');
-          })
-          .saveDataFromWeb(state.students);
+        fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(state.students)
+        })
+        .then(() => {
+          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          setStatus('saved', `Disimpan (${timeStr})`);
+        })
+        .catch(err => {
+          console.error("Ralat simpan:", err);
+          setStatus('error', 'Gagal simpan ke cloud');
+        });
       }, 1500);
     }
 
-    // Auto-Fetch sewaktu laman mula dimuat
     function autoFetchFromCloud() {
       setStatus('loading', 'Menyegerak data...');
-      google.script.run
-        .withSuccessHandler(function(res) {
-          if (res && res.students) {
+      fetch(SCRIPT_URL)
+        .then(res => {
+          if (!res.ok) throw new Error("Ralat sambungan rangkaian");
+          return res.json();
+        })
+        .then(res => {
+          if (res && res.students && Object.keys(res.students).length > 0) {
             state.students = res.students;
-            state.classes.forEach(c => { if (!state.students[c]) state.students[c] = []; });
-            renderClassNav();
-            if (!document.getElementById('view-dashboard').classList.contains('hidden')) {
-              renderDashboard();
-            } else {
-              renderClassView();
-            }
-            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            setStatus('saved', `Terkini (${timeStr})`);
           }
+          state.classes.forEach(c => { if (!state.students[c]) state.students[c] = []; });
+          renderClassNav();
+          if (!document.getElementById('view-dashboard').classList.contains('hidden')) {
+            renderDashboard();
+          } else {
+            renderClassView();
+          }
+          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          setStatus('saved', `Terkini (${timeStr})`);
         })
-        .withFailureHandler(function(err) {
+        .catch(err => {
+          console.error("Ralat fetch:", err);
+          state.classes.forEach(c => { if (!state.students[c]) state.students[c] = []; });
+          renderClassNav();
+          renderDashboard();
           setStatus('error', 'Ralat sambungan');
-        })
-        .loadDataForWeb();
+        });
     }
 
     function calculateGradeAndQuality(avg) {
@@ -420,6 +434,7 @@
 
     function renderClassNav() {
       const container = document.getElementById('class-nav-list');
+      if (!container) return;
       container.innerHTML = '';
       state.classes.forEach(cls => {
         const isActive = (document.getElementById('view-dashboard').classList.contains('hidden') && state.currentClass === cls);
@@ -546,7 +561,6 @@
       }
     }
 
-    // Pengekstrak Pintar UPSA SKDB
     function processBulkPaste() {
       const text = document.getElementById('paste-input-area').value;
       if (!text || !text.trim()) return alert("Sila tampal teks terlebih dahulu.");
@@ -625,7 +639,6 @@
       triggerAutoSave();
     }
 
-    // Dashboard
     function renderDashboard() {
       renderTopOverall();
       renderTopPerClass();
@@ -634,6 +647,7 @@
 
     function renderTopOverall() {
       const container = document.getElementById('top-overall-container');
+      if (!container) return;
       container.innerHTML = '';
       let all = [];
       state.classes.forEach(cls => {
@@ -674,6 +688,7 @@
 
     function renderTopPerClass() {
       const container = document.getElementById('top-per-class-container');
+      if (!container) return;
       container.innerHTML = '';
       state.classes.forEach(cls => {
         const list = (state.students[cls] || []).map(s => {
@@ -701,9 +716,9 @@
       });
     }
 
-    // 5 Murid Terbaik Setiap Mata Pelajaran (Kini dipamerkan Nama dan Nama Kelas)
     function renderTopPerSubject() {
       const container = document.getElementById('top-per-subject-container');
+      if (!container) return;
       container.innerHTML = '';
       SUBJECTS.forEach(sub => {
         let all = [];
@@ -745,7 +760,6 @@
       });
     }
 
-    // Modal Helpers
     function openModalBulkPaste() { document.getElementById('modal-bulk-paste').classList.remove('hidden'); }
     function openModalAddStudent() { document.getElementById('modal-add-student').classList.remove('hidden'); }
     function openModalAddClass() { document.getElementById('modal-add-class').classList.remove('hidden'); }
@@ -803,7 +817,6 @@
       state.title = text.trim();
     }
 
-    // Export Excel Kelas
     function exportCurrentClassExcel() {
       const list = state.students[state.currentClass] || [];
       if (list.length === 0) return alert("Tiada data untuk dieksport.");
@@ -820,7 +833,6 @@
       XLSX.writeFile(wb, `MARKAH_${state.currentClass.replace(/\s+/g, '_')}_2026.xlsx`);
     }
 
-    // Export Excel Semua Data
     function exportAllToExcel() {
       const wb = XLSX.utils.book_new();
       state.classes.forEach(cls => {
@@ -838,11 +850,9 @@
       XLSX.writeFile(wb, `PAPAN_MARKAH_TAHUN_5_SKDB_2026.xlsx`);
     }
 
-    // MUAT TURUN LEADERBOARD KESELURUHAN (3 BAHAGIAN DALAM 1 FAIL DENGAN MULTI-SHEET)
     function exportAllLeaderboardsExcel() {
       const wb = XLSX.utils.book_new();
 
-      // BAHAGIAN 1: 5 Murid Terbaik Keseluruhan Tahun 5
       let allOverall = [];
       state.classes.forEach(cls => {
         (state.students[cls] || []).forEach(st => {
@@ -863,7 +873,6 @@
       });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rowsOverall), "TOP_5_KESELURUHAN_T5");
 
-      // BAHAGIAN 2: 5 Murid Terbaik Setiap Kelas
       const rowsPerClass = [
         ["5 MURID TERBAIK SETIAP KELAS TAHUN 5 (SK DESA BAIDURI 2026)"],
         ["KELAS", "KEDUDUKAN", "NAMA MURID", "JUMLAH MARKAH (500)", "PURATA (%)"]
@@ -884,7 +893,6 @@
       });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rowsPerClass), "TOP_5_SETIAP_KELAS");
 
-      // BAHAGIAN 3: 5 Murid Terbaik Setiap Mata Pelajaran (Keseluruhan T5)
       const rowsPerSubject = [
         ["5 MURID TERBAIK SETIAP MATA PELAJARAN KESELURUHAN TAHUN 5 (SK DESA BAIDURI 2026)"],
         ["MATA PELAJARAN", "KEDUDUKAN", "NAMA MURID", "KELAS", "MARKAH"]
@@ -910,179 +918,10 @@
       });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rowsPerSubject), "TOP_5_SETIAP_SUBJEK");
 
-      // Jana dan Muat Turun Fail Excel
       XLSX.writeFile(wb, `LEADERBOARD_PENUH_TAHUN_5_SKDB_2026.xlsx`);
     }
 
     window.addEventListener('DOMContentLoaded', initApp);
-  <!-- JAVASCRIPT LOGIC DENGAN SAMBUNGAN FETCH (API) -->
-  <script>
-    // Pautan Web App Deployment Google Apps Script anda
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxqYHbHh8pDtkRZo6bBVmesruylS5OjYeyRfUxVqlqyZ8GDoDej9NUcrz6pzJFLWaU-A/exec";
-
-    const DEFAULT_CLASSES = ["5 BERLIAN", "5 DELIMA", "5 INTAN", "5 MUTIARA", "5 NILAM", "5 PERMATA", "5 ZAMRUD"];
-    const SUBJECTS = [
-      { key: "bm", name: "BM" },
-      { key: "bi", name: "BI" },
-      { key: "matematik", name: "M3" },
-      { key: "sains", name: "Sains" },
-      { key: "sejarah", name: "Sejarah" }
-    ];
-
-    let state = {
-      title: "PAPARAN MARKAH MURID TAHUN 5 2026",
-      classes: [...DEFAULT_CLASSES],
-      currentClass: "5 BERLIAN",
-      students: {}
-    };
-
-    let autoSaveTimer = null;
-
-    function setStatus(type, message) {
-      const icon = document.getElementById('cloud-status-icon');
-      const text = document.getElementById('cloud-status-text');
-      if (!icon || !text) return;
-
-      if (type === 'loading') {
-        icon.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400 text-xs"></i>`;
-        text.innerText = message;
-      } else if (type === 'saving') {
-        icon.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-400 text-xs"></i>`;
-        text.innerText = message;
-      } else if (type === 'saved') {
-        icon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i>`;
-        text.innerText = message;
-      } else if (type === 'error') {
-        icon.innerHTML = `<i class="fa-solid fa-circle-exclamation text-rose-400 text-xs"></i>`;
-        text.innerText = message;
-      }
-    }
-
-    // Pencetus Auto-Save Menggunakan fetch (POST)
-    function triggerAutoSave() {
-      setStatus('saving', 'Menyimpan perubahan...');
-      clearTimeout(autoSaveTimer);
-      autoSaveTimer = setTimeout(() => {
-        fetch(SCRIPT_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8"
-          },
-          body: JSON.stringify(state.students)
-        })
-        .then(() => {
-          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          setStatus('saved', `Disimpan (${timeStr})`); }) .catch(err => { console.error("Ralat simpan:", err); setStatus('error', 'Gagal simpan ke cloud'); }); }, 1500); }  // Auto-Fetch sewaktu laman mula dimuat Menggunakan fetch (GET) function autoFetchFromCloud() { setStatus('loading', 'Menyegerak data...'); fetch(SCRIPT_URL) .then(res => { if (!res.ok) throw new Error("Ralat sambungan rangkaian"); return res.json(); }) .then(res => { if (res && res.students) { state.students = res.students; state.classes.forEach(c => { if (!state.students[c]) state.students[c] = []; }); renderClassNav(); if (!document.getElementById('view-dashboard').classList.contains('hidden')) { renderDashboard(); } else { renderClassView(); } const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); setStatus('saved', `Terkini (${timeStr})`);
-          }
-        })
-        .catch(err => {
-          console.error("Ralat fetch:", err);
-          setStatus('error', 'Ralat sambungan');
-        });
-    }
-
-    function calculateGradeAndQuality(avg) {
-      if (avg >= 82) return { gred: 'A', kualiti: 'BIJAK', bg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' };
-      if (avg >= 66) return { gred: 'B', kualiti: 'BIJAK', bg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' };
-      if (avg >= 50) return { gred: 'C', kualiti: 'SEDERHANA', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' };
-      if (avg >= 35) return { gred: 'D', kualiti: 'SEDERHANA', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' };
-      if (avg >= 20) return { gred: 'E', kualiti: 'LEMAH', bg: 'bg-rose-500/20 text-rose-400 border-rose-500/40' };
-      return { gred: 'F', kualiti: 'LEMAH', bg: 'bg-rose-500/20 text-rose-400 border-rose-500/40' };
-    }
-
-    function initApp() {
-      state.classes.forEach(c => { if (!state.students[c]) state.students[c] = []; });
-      renderClassNav();
-      switchView('dashboard');
-      autoFetchFromCloud();
-    }
-
-    function switchView(viewName, className = null) {
-      const vDashboard = document.getElementById('view-dashboard');
-      const vClass = document.getElementById('view-class');
-      const navDashboard = document.getElementById('nav-dashboard');
-
-      if (viewName === 'dashboard') {
-        vDashboard.classList.remove('hidden');
-        vClass.classList.add('hidden');
-        navDashboard.classList.add('bg-blue-600', 'text-white');
-        renderDashboard();
-      } else {
-        vDashboard.classList.add('hidden');
-        vClass.classList.remove('hidden');
-        navDashboard.classList.remove('bg-blue-600', 'text-white');
-        if (className) state.currentClass = className;
-        renderClassView();
-      }
-      renderClassNav();
-    }
-
-    function renderClassNav() {
-      const container = document.getElementById('class-nav-list');
-      container.innerHTML = '';
-      state.classes.forEach(cls => {
-        const isActive = (document.getElementById('view-dashboard').classList.contains('hidden') && state.currentClass === cls);
-        const count = state.students[cls] ? state.students[cls].length : 0;
-        const div = document.createElement('div');
-        div.className = `group flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
-          isActive ? 'bg-slate-800 text-amber-400 border-l-4 border-amber-400 font-bold' : 'text-slate-300 hover:bg-slate-900 hover:text-white'
-        }`;
-        div.innerHTML = `
-          <div class="flex items-center space-x-2.5 truncate" onclick="switchView('class', '${cls}')">
-            <i class="fa-solid fa-chalkboard-user text-xs ${isActive ? 'text-amber-400' : 'text-slate-500'}"></i>
-            <span class="truncate">${cls}</span>
-          </div>
-          <span class="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">${count}</span>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    function renderClassView() {
-      document.getElementById('current-class-title').innerText = state.currentClass;
-      const list = state.students[state.currentClass] || [];
-      const tbody = document.getElementById('student-table-body');
-      const emptyState = document.getElementById('empty-state');
-      tbody.innerHTML = '';
-
-      if (list.length === 0) {
-        emptyState.classList.remove('hidden');
-        return;
-      }
-      emptyState.classList.add('hidden');
-
-      list.forEach((st, idx) => {
-        const bm = Number(st.bm) || 0;
-        const bi = Number(st.bi) || 0;
-        const m3 = Number(st.matematik) || 0;
-        const sn = Number(st.sains) || 0;
-        const sej = Number(st.sejarah) || 0;
-        const total = bm + bi + m3 + sn + sej;
-        const avg = parseFloat((total / 5).toFixed(1));
-        const res = calculateGradeAndQuality(avg);
-
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-900/50 transition border-b border-slate-800/80";
-        tr.innerHTML = `
-          <td class="py-2.5 px-3 text-center font-mono text-slate-400 text-xs">${idx + 1}</td>
-          <td class="py-2 px-3 font-semibold text-slate-100 text-xs truncate max-w-[220px]" title="${st.name}">${st.name}</td>
-          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.bm ?? ''}" oninput="updateScore('${st.id}', 'bm', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
-          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.bi ?? ''}" oninput="updateScore('${st.id}', 'bi', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
-          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.matematik ?? ''}" oninput="updateScore('${st.id}', 'matematik', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
-          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.sains ?? ''}" oninput="updateScore('${st.id}', 'sains', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
-          <td class="py-1 px-1.5 text-center"><input type="number" min="0" max="100" value="${st.sejarah ?? ''}" oninput="updateScore('${st.id}', 'sejarah', this.value)" class="w-16 text-center bg-slate-950 border border-slate-800 rounded py-1 px-1 text-xs text-amber-300 font-bold"></td>
-          <td id="tot-${st.id}" class="py-2 px-1 text-center font-bold text-amber-400 bg-slate-950/40 text-xs">${total}</td>
-          <td id="avg-${st.id}" class="py-2 px-1 text-center font-bold text-emerald-400 bg-slate-950/40 text-xs">${avg}%</td>
-          <td id="grd-${st.id}" class="py-2 px-1 text-center font-black text-amber-300 bg-slate-950/50 text-xs">${res.gred}</td>
-          <td class="py-2 px-1 text-center"><span id="qlt-${st.id}" class="text-[10px] font-bold px-2 py-0.5 rounded border ${res.bg}">${res.kualiti}</span></td>
-          <td class="py-1 px-1.5 text-center">
-            <select onchange="updateBehavior('${st.id}', this.value)" class="bg-slate-950 border border-slate-800 text-[11px] rounded px-1.5 py-1 text-slate-300">
-              <option value="BAIK" ${st.behavior==='BAIK'?'selected':''}>Baik</option>
-              <option value="SEDERHANA" ${st.behavior==='SEDERHANA'?'selected':''}>Sederhana</option>
-              <option value="NAKAL" ${st.behavior==='NAKAL'?'selected':''}>Nakal</option>
-            </select>
-          </td>
-          <td class="py-2 px-2 text-center">
+  </script>
 </body>
 </html>
