@@ -412,6 +412,13 @@
       renderClassNav();
       switchView('dashboard');
       autoFetchFromCloud();
+
+      // Auto-refresh: Semak dan tarik markah terkini daripada Google Sheets setiap 25 saat
+      setInterval(() => {
+        if (!autoSaveTimer) {
+          autoFetchFromCloud();
+        }
+      }, 25000);
     }
 
     function switchView(viewName, className = null) {
